@@ -37,9 +37,14 @@ int main(int argc, char *argv[]){
     }
 
     std::thread threads[Nhilos];
-    for(auto i = 0;i<Nhilos;i++){
+    
+    for(auto i=0;i<Nhilos;i++){
         threads[i] = std::thread(suma,array,i,N);
+        if (i==Nhilos){
+            suma(array, i+1,N);
+        }
     }
+    //suma(array, i+1,N);
 
     for(auto i = 0; i<Nhilos;i++){
         threads[i].join();

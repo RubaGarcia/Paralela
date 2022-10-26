@@ -10,19 +10,19 @@
 
 int sumaTotal = 0;
 int Nhilos;//numeroHilos
-
+int indiceR=1;
 
 std::mutex g_m;
 
 
-void rap(int* array, int* R, int i){
-    for(int j = 0;j<i;j++){
-        
+void rap(int* array, int* R, int N){
+//fprintf(stdout,"asdjkgchkj\n");
+    while(indiceR <= N){
         {
-            std::lock_guard<std::mutex>guard(g_m);
-            R[i]+=array[j];
-            
-        }
+        std::lock_guard<std::mutex>guard(g_m);
+        R[indiceR]=R[indiceR-1] + array[indiceR];
+        indiceR++;  
+        } 
     }
 }
 
@@ -43,29 +43,29 @@ int main(int argc, char *argv[]){
     //printf("%d\n", N);
     
     for(int i = 0; i<N; i++){
-        array[i] = rand();
+        array[i] = 1;
+        //array[i] = rand();
     }
 
 
     std::thread threads[Nhilos];
-    
-    //TODO
-    //otra opcion: realizar un array de variables booleanas tan largo como el numero
-    //de hilos que identifique cuando se queda un hilo libre, en ese momento el hilo hará su iteracion de RAP
 
-    //tengo que preguntar que tal lo ve la gente porque me parece demasiado 
-    //esfuerzo en saber como van las variables condicionales como para hacerlo rapido
-    //TODO
-    for(auto j = 0;j<(N-1);j++){
-        threads[j] = std::thread(rap,array,R,j);
+    for(auto i = 0; i<Nhilos; i++){
+        threads[i] = std::thread(rap,array,R, N);   
     }
+    rap(array, R, N);
+    
 
     //rap();//el propio hilo maestro tiene que hacer el RAP tambien
+
     for(auto j = 0; j<Nhilos;j++){
         threads[j].join();
+        //printf("%dAA\n",j);
     }
+    
     for (int i =0;i<N-1;i++){
-        printf("%d",R[i]);
+        //printf("%d",R[i]);
     }
+    printf("%d\n",R[N-1]);
 }
 

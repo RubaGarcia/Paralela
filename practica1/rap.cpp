@@ -17,12 +17,12 @@ std::mutex g_m;
 
 void rap(int* array, int* R, int N){
 //fprintf(stdout,"asdjkgchkj\n");
-    while(indiceR <= N){
+    while(indiceR+1 < N){
         {
         std::lock_guard<std::mutex>guard(g_m);
         R[indiceR]=R[indiceR-1] + array[indiceR];
-        indiceR++;  
-        } 
+        indiceR++;
+        }
     }
 }
 
@@ -56,15 +56,12 @@ int main(int argc, char *argv[]){
     rap(array, R, N);
     
 
-    //rap();//el propio hilo maestro tiene que hacer el RAP tambien
-
+    
     for(auto j = 0; j<Nhilos;j++){
         threads[j].join();
-        //printf("%dAA\n",j);
     }
     
     for (int i =0;i<N-1;i++){
-        //printf("%d",R[i]);
     }
     printf("%d\n",R[N-1]);
 }

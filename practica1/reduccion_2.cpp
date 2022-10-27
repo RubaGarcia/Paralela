@@ -30,7 +30,7 @@ int main(int argc, char *argv[]){
     srand(time(NULL));
 
     int* array = (int*)malloc(N*sizeof(int));
-    //printf("%d\n", N);
+    
     
     for(int i = 0; i<N; i++){
         array[i] = rand();
@@ -44,14 +44,11 @@ int main(int argc, char *argv[]){
             suma(array, i+1,N);
         }
     }
-    //suma(array, i+1,N);
+    
 
     for(auto i = 0; i<Nhilos;i++){
         threads[i].join();
     }
-
-    
-    
 
     gettimeofday(&end, NULL);
 
@@ -64,7 +61,6 @@ void suma(int* array, int indiceHilo,int N){
     int i=indiceHilo*accesosHilo;
     int aux = 0;
     while(i<(indiceHilo*accesosHilo+accesosHilo)){
-        
         aux += array[i];
         i++;
     }
@@ -77,8 +73,7 @@ void suma(int* array, int indiceHilo,int N){
         }
         
     }
-    
-    
+ 
     {
         std::lock_guard<std::mutex>guard(g_m);
         sumaTotal+=aux;

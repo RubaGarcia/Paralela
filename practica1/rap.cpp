@@ -12,18 +12,26 @@ int sumaTotal = 0;
 int Nhilos;//numeroHilos
 int indiceR=1;
 
+bool ultimoIndiceAtendido = false;
 std::mutex g_m;
 
-
 void rap(int* array, int* R, int N){
-//fprintf(stdout,"asdjkgchkj\n");
-    while(indiceR+1 < N){
+
+    while(indiceR < N){
+        //auto aux=indiceR-1;
         {
         std::lock_guard<std::mutex>guard(g_m);
         R[indiceR]=R[indiceR-1] + array[indiceR];
         indiceR++;
+        printf("%d\n",indiceR);
+        //TODO porqué coño hace mas iters 
         }
     }
+
+    /*if(!ultimoIndiceAtendido){
+        R[N-1]+=array[N];
+        ultimoIndiceAtendido=true;
+    }*/
 }
 
 

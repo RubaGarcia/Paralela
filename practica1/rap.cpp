@@ -15,24 +15,9 @@ int indiceR=1;
 bool ultimoIndiceAtendido = false;
 std::mutex g_m;
 
-void rap(int* array, int* R, int N){
 
-    while(indiceR < N){
-        //auto aux=indiceR-1;
-        {
-        std::lock_guard<std::mutex>guard(g_m);
-        R[indiceR]=R[indiceR-1] + array[indiceR];
-        indiceR++;
-        printf("%d\n",indiceR);
-        //TODO porqué coño hace mas iters 
-        }
-    }
-
-    /*if(!ultimoIndiceAtendido){
-        R[N-1]+=array[N];
-        ultimoIndiceAtendido=true;
-    }*/
-}
+float time_diff(struct timeval *start, struct timeval *end) ;
+void rap(int* array, int* R, int N);
 
 
 int main(int argc, char *argv[]){
@@ -49,10 +34,10 @@ int main(int argc, char *argv[]){
     int* R = (int*)malloc((N-1)*sizeof(int));
     int* array = (int*)malloc(N*sizeof(int));
     //printf("%d\n", N);
-    
+    R[0] = 1;
     for(int i = 0; i<N; i++){
-        array[i] = 1;
-        //array[i] = rand();
+        //array[i] = 1;
+        array[i] = rand();
     }
 
 
@@ -62,15 +47,27 @@ int main(int argc, char *argv[]){
         threads[i] = std::thread(rap,array,R, N);   
     }
     rap(array, R, N);
-    
 
-    
     for(auto j = 0; j<Nhilos;j++){
         threads[j].join();
     }
     
-    for (int i =0;i<N-1;i++){
-    }
-    printf("%d\n",R[N-1]);
+    gettimeofday(&end, NULL);
+
+    printf("%f, %d, %d\n", time_diff(&start, &end), N, Nhilos);
 }
 
+float time_diff(struct timeval *start, struct timeval *end) {
+    return (end->tv_sec - start->tv_sec) + 1e-6*(end->tv_usec - start->tv_usec);
+}
+
+void rap(int* array, int* R, int N){
+    do{
+        {
+        std::lock_guard<std::mutex>guard(g_m);
+        indiceR++;
+        //printf("%d\n",indiceR); 
+        }
+        R[indiceR]=R[indiceR-1] + array[indiceR];
+    }while(indiceR < N);
+}

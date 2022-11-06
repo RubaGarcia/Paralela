@@ -105,9 +105,8 @@ void Init_Mat_Inf (int dim, float *M)
 
 void Multiplicar_Matrices (float *A, float *B, float *C, int dim)
 {
-	omp_set_num_threads(4);
 	int i, j, k;
-	#pragma omp parallel shared(C, A, B) private (i,j,k)
+	#pragma omp parallel num_threads(omp_get_max_threads()) shared(C, A, B) private (i,j,k)
 	{
 	#pragma omp for
 	for (i=0; i < dim; i++)
@@ -134,6 +133,25 @@ void Multiplicar_Matrices_Sup (float *A, float *B, float *C, int dim)
 			for (k=(i+1); k < dim; k++)
 				C[i*dim+j] += A[i*dim+k] * B[j+k*dim];
 } 
+void Multiplicar_Matrices_Sup_paralelo (float *A, float *B, float *C, int dim)
+{
+	int i, j, k;
+	#pragma omp parallel num_threads(omp_get_max_threads()) shared(C, A, B) private (i,j,k)
+	{
+	#pragma omp for schedule(static)
+	for (i=0; i < dim; i++)
+		for (j=0; j < dim; j++)
+			C[i*dim+j] = 0.0;
+
+	#pragma omp for schedule(static)
+	for (i=0; i < (dim-1); i++)
+		for (j=0; j < (dim-1); j++)
+			for (k=(i+1); k < dim; k++)
+				C[i*dim+j] += A[i*dim+k] * B[j+k*dim];
+	}
+}
+
+
 
 void Multiplicar_Matrices_Inf (float *A, float *B, float *C, int dim)
 {

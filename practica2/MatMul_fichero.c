@@ -40,6 +40,7 @@ void main (int argc, char **argv)
         int nthreads = 1, block_size = 1;
 	FILE *fd;
 
+	double resultados[6];
 /* Lectura de parámetros de entrada */
 /* Usage: ./MatMul [<num threads>] [block_size] [<input file>]*/
 
@@ -61,8 +62,8 @@ void main (int argc, char **argv)
 	Escribir_Resultados (C, dimM, dimK,1);
 
 	gettimeofday(&end, NULL);
-
-    printf("---------------\ntiempo paralelo Ejercicio 1:\t%f\n--------------\n", time_diff(&start, &end));
+	resultados[0] = time_diff(&start, &end);
+    //printf("---------------\ntiempo paralelo Ejercicio 1:\t%f\n--------------\n", time_diff(&start, &end));
 	
 	
 	//--------parte secuencial--------
@@ -75,8 +76,8 @@ void main (int argc, char **argv)
 	Escribir_Resultados (D, dimM, dimK,0);
 
 	gettimeofday(&end, NULL);
-
-    printf("---------------\ntiempo secuencial Ejercicio 1:\t%f\n--------------\n", time_diff(&start, &end));
+	resultados[1]=time_diff(&start, &end);
+    //printf("---------------\ntiempo secuencial Ejercicio 1:\t%f\n--------------\n", time_diff(&start, &end));
 	////////////////
 	//EJERICICIO 2//
 	////////////////
@@ -86,12 +87,12 @@ void main (int argc, char **argv)
 	gettimeofday(&start, NULL);
 
 	
-	Multiplicar_Matrices_Sup_paralelo (A, B, C, dimM);
+	Multiplicar_Matrices_Sup_paralelo (A, B, C, dimM,block_size);
 	Escribir_Resultados (C, dimM, dimK,1);
 
 	gettimeofday(&end, NULL);
-
-    printf("---------------\ntiempo paralelo Ejercicio 2(multiplicacion superior):\t%f\n--------------\n", time_diff(&start, &end));
+	resultados[2]=time_diff(&start, &end);
+    //printf("---------------\ntiempo paralelo Ejercicio 2(multiplicacion superior):\t%f\n--------------\n", time_diff(&start, &end));
 	
 	
 	//--------parte secuencial--------
@@ -104,8 +105,8 @@ void main (int argc, char **argv)
 	Escribir_Resultados (D, dimM, dimK,0);
 
 	gettimeofday(&end, NULL);
-
-    printf("---------------\ntiempo secuencial Ejercicio 2(multiplicacion superior):\t%f\n--------------\n", time_diff(&start, &end));
+	resultados[3]=time_diff(&start, &end);
+    //printf("---------------\ntiempo secuencial Ejercicio 2(multiplicacion superior):\t%f\n--------------\n", time_diff(&start, &end));
 
 	////////////////
 	//EJERICICIO 3//
@@ -113,13 +114,13 @@ void main (int argc, char **argv)
 	gettimeofday(&start, NULL);
 
 	
-	Multiplicar_Matrices_Inf_paralelo (A, B, C, dimM);
+	Multiplicar_Matrices_Inf_paralelo (A, B, C, dimM,block_size);
 	Escribir_Resultados (C, dimM, dimK,1);
 
 	gettimeofday(&end, NULL);
 
-    printf("---------------\ntiempo paralelo Ejercicio 3(multiplicacion inferior):\t%f\n--------------\n", time_diff(&start, &end));
-	
+    //printf("---------------\ntiempo paralelo Ejercicio 3(multiplicacion inferior):\t%f\n--------------\n", time_diff(&start, &end));
+	resultados[4]=time_diff(&start, &end);
 	
 	//--------parte secuencial--------
 
@@ -131,8 +132,13 @@ void main (int argc, char **argv)
 	Escribir_Resultados (D, dimM, dimK,0);
 
 	gettimeofday(&end, NULL);
-
-    printf("---------------\ntiempo secuencial Ejercicio 3(multiplicacion inferior):\t%f\n--------------\n", time_diff(&start, &end));
+	resultados[5]=time_diff(&start, &end);
+    //printf("---------------\ntiempo secuencial Ejercicio 3(multiplicacion inferior):\t%f\n--------------\n", time_diff(&start, &end));
+	//printf("ejercicio1P,ejercicio1S,ejercicio2P,ejercicio2S,ejercicio3P,ejercicio3S\n");
+	for(int i =0; i<6;i=i+2){
+		printf("%f,%f,",resultados[i],resultados[i+1]);
+	}
+	printf("\n");
 
 	exit (0);
 }
@@ -225,17 +231,19 @@ void Multiplicar_Matrices_Sup (float *A, float *B, float *C, int dim)
 				C[i*dim+j] += A[i*dim+k] * B[j+k*dim];
 } 
 
-void Multiplicar_Matrices_Sup_paralelo (float *A, float *B, float *C, int dim)
+void Multiplicar_Matrices_Sup_paralelo (float *A, float *B, float *C, int dim, int blockSize)
 {
 	int i, j, k;
+	
 	#pragma omp parallel num_threads(omp_get_max_threads()) shared(C, A, B) private (i,j,k)
 	{
-	#pragma omp for schedule(static)
+	
+	#pragma omp for schedule(dynamic,blockSize)
 	for (i=0; i < dim; i++)
 		for (j=0; j < dim; j++)
 			C[i*dim+j] = 0.0;
 
-	#pragma omp for schedule(static)
+	#pragma omp for schedule(dynamic,blockSize)
 	for (i=0; i < (dim-1); i++)
 		for (j=0; j < (dim-1); j++)
 			for (k=(i+1); k < dim; k++)
@@ -256,16 +264,16 @@ void Multiplicar_Matrices_Inf (float *A, float *B, float *C, int dim)
 			for (k=0; k < i; k++)
 				C[i*dim+j] += A[i*dim+k] * B[j+k*dim];
 } 
-void Multiplicar_Matrices_Inf_paralelo (float *A, float *B, float *C, int dim)
+void Multiplicar_Matrices_Inf_paralelo (float *A, float *B, float *C, int dim,int blockSize)
 {
 	int i, j, k;
 	#pragma omp parallel num_threads(omp_get_max_threads()) shared(C, A, B) private (i,j,k)
 	{
-	#pragma omp for schedule(static)
+	#pragma omp for schedule(dynamic,blockSize)
 	for (i=0; i < dim; i++)
 		for (j=0; j < dim; j++)
 			C[i*dim+j] = 0.0;
-	#pragma omp for schedule(static)
+	#pragma omp for schedule(dynamic,blockSize)
 	for (i=1; i < dim; i++)
 		for (j=1; j < dim; j++)
 			for (k=0; k < i; k++)

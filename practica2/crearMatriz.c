@@ -25,7 +25,7 @@ void main (int argc, char **argv)
     B = (float *) malloc (dim * dim * sizeof (float));
 
     Init_Mat_Sup (dim, A);
-    Init_Mat_Sup (dim, B);
+    Init_Mat_Inf (dim, B);
 	Escribir_Matrizes(A,dim,B);
 	
     exit(0);

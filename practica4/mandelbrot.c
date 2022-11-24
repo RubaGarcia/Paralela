@@ -2,6 +2,7 @@
 # include <stdio.h>
 # include <math.h>
 # include <time.h>
+# include <omp.h>
 
 int main ( void );
 int explode ( double x, double y, int count_max );
@@ -9,6 +10,10 @@ int ppma_write ( char *output_filename, int xsize, int ysize, int *r, int *g, in
 int ppma_write_data ( FILE *file_out, int xsize, int ysize, int *r, int *g, int *b );
 int ppma_write_header ( FILE *file_out, char *output_filename, int xsize, int ysize, int rgb_max );
 void timestamp ( void );
+
+
+#define EJECS = {OPENMP, RUNTIME, SEC, PRIVS}
+#define EJEC OPENMP //TODO variar en funcion de cada ejecucion para el ejercicio 2
 
 int main ( void )
 {
@@ -31,6 +36,10 @@ int main ( void )
   double y;
   double y_max =   1.75;
   double y_min = - 1.75;
+
+  omp_lock_t mut;
+  int CPrivada=0;
+  int aux;
 
   timestamp ( );
   printf ( "\n" );
@@ -55,83 +64,142 @@ int main ( void )
 */
   count = ( int * ) malloc ( n * n * sizeof ( int ) );
 
-  for ( i = 0; i < n; i++ )
+
+  #pragma omp parallel num_threads(omp_get_max_threads()) firstprivate(i,j,x,y,c, CPrivada) shared(n,count,count_max,x_max,x_min,y_max,y_min,c_max,r,g,b,mut,aux)
   {
-    for ( j = 0; j < n; j++ )
-    {
-      x = ( ( double ) (     j     ) * x_max
-          + ( double ) ( n - j - 1 ) * x_min )
-          / ( double ) ( n     - 1 );
+    #pragma omp for
+      for ( i = 0; i < n; i++ )
+      {
+        for ( j = 0; j < n; j++ )
+        {
+          x = ( ( double ) (     j     ) * x_max
+              + ( double ) ( n - j - 1 ) * x_min )
+              / ( double ) ( n     - 1 );
 
-      y = ( ( double ) (     i     ) * y_max
-          + ( double ) ( n - i - 1 ) * y_min )
-          / ( double ) ( n     - 1 );
+          y = ( ( double ) (     i     ) * y_max
+              + ( double ) ( n - i - 1 ) * y_min )
+              / ( double ) ( n     - 1 );
 
-      count[i+j*n] = explode ( x, y, count_max );
-    }
-  }
+          count[i+j*n] = explode ( x, y, count_max );
+        }
+      }
+    
+    
+  
+  
 /*
   Determine the coloring of each pixel.
 */
-  c_max = 0;
-  for ( j = 0; j < n; j++ )
+  #pragma omp single
   {
-    for ( i = 0; i < n; i++ )
-    {
-      if ( c_max < count[i+j*n] )
-      {
-        c_max = count[i+j*n];
-      }
-    }
+    aux=omp_get_num_threads();
+    c_max = 0;
+    #if EJEC == RUNTIME
+      omp_init_lock(&mut);
+    #endif
   }
-/*
-  Set the image data.
-*/
-  r = ( int * ) malloc ( n * n * sizeof ( int ) );
-  g = ( int * ) malloc ( n * n * sizeof ( int ) );
-  b = ( int * ) malloc ( n * n * sizeof ( int ) );
-
-  for ( i = 0; i < n; i++ )
-  {
+    
+  #pragma omp for
     for ( j = 0; j < n; j++ )
     {
-      if ( count[i+j*n] % 2 == 1 )
+      int numeroThread = omp_get_thread_num();
+      for ( i = 0; i < n; i++ )
       {
-        r[i+j*n] = 255;
-        g[i+j*n] = 255;
-        b[i+j*n] = 255;
+        #if EJEC == OPENMP
+          #pragma omp critical
+          {
+            if ( c_max < count[i+j*n] )
+            {
+              c_max = count[i+j*n];
+            }
+          }
+          
+        #elif EJEC==RUNTIME
+          {
+            omp_set_lock(&mut);
+            if ( c_max < count[i+j*n]) {
+              c_max = count[i+j*n];
+            }
+            omp_unset_lock(&mutex); 
+          }
+        #elif EJEC==SEC
+          if ( c_max < count[i+j*n]) {
+            c_max = count[i+j*n];
+          }
+        #elif EJEC==PRIVS
+        if ( CPrivada < count[i+j*n]) {
+			    CPrivada = count[i+j*n];
+		    }
+        #endif
       }
-      else
+      #if EJEC==PRIVS
+        #pragma omp critical
+        {
+          if(c_max=CPrivada)
+            c_max=CPrivada;
+        }
+      #endif
+    }
+  /*
+    Set the image data.
+  */
+    #pragma omp single
+    {
+      #if E3 == RUNTIME
+      omp_destroy_lock(&mut);
+      #endif
+      r = ( int * ) malloc ( n * n * sizeof ( int ) );
+      g = ( int * ) malloc ( n * n * sizeof ( int ) );
+      b = ( int * ) malloc ( n * n * sizeof ( int ) );
+    }
+    
+    #pragma omp for
+    for ( i = 0; i < n; i++ )
+    {
+      for ( j = 0; j < n; j++ )
       {
-        c = ( int ) ( 255.0 * sqrt ( sqrt ( sqrt (
-          ( ( double ) ( count[i+j*n] ) / ( double ) ( c_max ) ) ) ) ) );
-        r[i+j*n] = 3 * c / 5;
-        g[i+j*n] = 3 * c / 5;
-        b[i+j*n] = c;
+        if ( count[i+j*n] % 2 == 1 )
+        {
+          r[i+j*n] = 255;
+          g[i+j*n] = 255;
+          b[i+j*n] = 255;
+        }
+        else
+        {
+          c = ( int ) ( 255.0 * sqrt ( sqrt ( sqrt (
+            ( ( double ) ( count[i+j*n] ) / ( double ) ( c_max ) ) ) ) ) );
+          r[i+j*n] = 3 * c / 5;
+          g[i+j*n] = 3 * c / 5;
+          b[i+j*n] = c;
+        }
       }
     }
+  /*
+    Write an image file.
+  */
+    #pragma omp single
+    {
+      ierror = ppma_write ( filename, n, n, r, g, b );
+
+      printf ( "\n" );
+      printf ( "  ASCII PPM image data stored in \"%s\".\n", filename );
+
+      free ( b );
+      free ( count );
+      free ( g );
+      free ( r );
+
+      /*
+      Terminate.
+      */
+      printf ( "\n" );
+      printf ( "MANDELBROT\n" );
+      printf ( "  Normal end of execution.\n" );
+      printf ( "\n" );
+      timestamp ( );
+    }
+ 
   }
-/*
-  Write an image file.
-*/
-  ierror = ppma_write ( filename, n, n, r, g, b );
-
-  printf ( "\n" );
-  printf ( "  ASCII PPM image data stored in \"%s\".\n", filename );
-
-  free ( b );
-  free ( count );
-  free ( g );
-  free ( r );
-/*
-  Terminate.
-*/
-  printf ( "\n" );
-  printf ( "MANDELBROT\n" );
-  printf ( "  Normal end of execution.\n" );
-  printf ( "\n" );
-  timestamp ( );
-
   return 0;
 }
 

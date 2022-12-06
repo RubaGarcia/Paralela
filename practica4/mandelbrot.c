@@ -14,7 +14,7 @@ void timestamp ( void );
 
 #define EJECS = {OPENMP, RUNTIME, SEC, PRIVS}
 #define EJEC OPENMP //TODO variar en funcion de cada ejecucion para el ejercicio 2
-
+#define TIEMPOS 1
 int main ( void )
 {
   int *b;
@@ -22,7 +22,17 @@ int main ( void )
   int c_max;
   int *count;
   int count_max = 1000;
-  char *filename = "mandelbrot.ppm";
+/*
+  #if EJEC==SEC
+    char *filename = "mandelbrot.ppm";
+    printf("||||||||||||||||||\n");
+    printf("SECUENCIAL\n");
+    printf("||||||||||||||||||\n");
+
+  #else */
+    char *filename = "mandelbrot_paralelo.ppm";
+  //#endif
+  
   int *g;
   int i;
   int ierror;
@@ -41,6 +51,15 @@ int main ( void )
   int CPrivada=0;
   int aux;
 
+
+  double ini, fin;
+  #ifdef TIEMPOS
+    ini = omp_get_wtime();
+  #endif
+  #pragma omp parallel num_threads(omp_get_max_threads()) firstprivate(i,j,x,y,c, CPrivada) shared(n,count,count_max,x_max,x_min,y_max,y_min,c_max,r,g,b,mut,aux)
+  {
+  #pragma omp single
+  {
   timestamp ( );
   printf ( "\n" );
   printf ( "MANDELBROT\n" );
@@ -59,15 +78,16 @@ int main ( void )
   printf ( "  An ASCII PPM image of the set is created using\n" );
   printf ( "    N = %d pixels in the X direction and\n", n );
   printf ( "    N = %d pixels in the Y direction.\n", n );
+
 /*
   Carry out the iteration for each pixel, determining COUNT.
 */
   count = ( int * ) malloc ( n * n * sizeof ( int ) );
+  }
 
-
-  #pragma omp parallel num_threads(omp_get_max_threads()) firstprivate(i,j,x,y,c, CPrivada) shared(n,count,count_max,x_max,x_min,y_max,y_min,c_max,r,g,b,mut,aux)
-  {
-    #pragma omp for
+  
+    
+      #pragma omp for
       for ( i = 0; i < n; i++ )
       {
         for ( j = 0; j < n; j++ )
@@ -102,10 +122,11 @@ int main ( void )
   #pragma omp for
     for ( j = 0; j < n; j++ )
     {
-      int numeroThread = omp_get_thread_num();
+    int numeroThread = omp_get_thread_num();
       for ( i = 0; i < n; i++ )
       {
         #if EJEC == OPENMP
+          
           #pragma omp critical
           {
             if ( c_max < count[i+j*n] )
@@ -200,6 +221,10 @@ int main ( void )
     }
  
   }
+  #ifdef TIEMPOS
+    fin = omp_get_wtime();
+    printf("Tiempo: %f\n", fin - ini);
+  #endif
   return 0;
 }
 

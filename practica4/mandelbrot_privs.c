@@ -45,8 +45,8 @@ char *filename = "mandelbrot_privs.ppm";
   int aux;
 
 
-  double ini, fin;
-  
+  double ini, fin_paralelo,fin_total;
+  double tiempos[2];
   #pragma omp parallel num_threads(omp_get_max_threads()) firstprivate(i,j,x,y,c, CPrivada) shared(n,count,count_max,x_max,x_min,y_max,y_min,c_max,r,g,b,mut,aux)
   {
   #pragma omp single
@@ -170,8 +170,10 @@ char *filename = "mandelbrot_privs.ppm";
     #ifdef TIEMPOS
     #pragma omp single
     {
-        fin = omp_get_wtime();
-        printf("Tiempo: %f\n", fin - ini);
+        fin_paralelo = omp_get_wtime();
+        //printf("Tiempo: %f\n", fin_paralelo - ini);
+        tiempos[0] = fin_paralelo - ini;
+        
     }
     
     #endif
@@ -201,7 +203,11 @@ char *filename = "mandelbrot_privs.ppm";
     }
  
   }
-  
+  fin_total = omp_get_wtime();
+    //printf("Tiempo: %f\n", fin_total - ini);
+    tiempos[1]=fin_total-ini;
+    
+    printf("Tiempo paralelo:\t%f \nTiempo total:\t%f \n", tiempos[0], tiempos[1]);
   return 0;
 }
 
